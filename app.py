@@ -1,108 +1,259 @@
 import streamlit as st
 
 from utils.pdf_loader import load_pdf
-from utils.vector_store import create_chunks
+
 from utils.vector_store import (
-    create_chunks,
-    create_vector_store
+    create_vector_store,
+    create_documents
 )
+
 from utils.chatbot import (
     retrieve_context,
-    generate_answer
+    generate_answer,
+    summarize_document,
+    generate_suggested_questions
 )
+
+# -----------------------------
+# SESSION STATE
+# -----------------------------
 if "messages" not in st.session_state:
     st.session_state.messages = []
-    
+
+# -----------------------------
+# PAGE CONFIG
+# -----------------------------
 st.set_page_config(
-    page_title="RAG PDF Chatbot",
-    page_icon="📚"
+    page_title="RAG PDF Chatbot | Shubh Beniwal",
+    page_icon="📚",
+    layout="wide"
 )
 
+# -----------------------------
+# TITLE
+# -----------------------------
 st.title("📚 RAG PDF Chatbot")
 
-uploaded_file = st.file_uploader(
-    "Upload PDF",
-    type=["pdf"]
+st.markdown("""
+### AI-Powered Multi-Document Question Answering System
+
+Upload one or more PDF documents and interact with them using Retrieval-Augmented Generation (RAG), semantic search, and Large Language Models.
+
+#### Features
+
+- Multi-PDF Knowledge Base
+- Semantic Search
+- Conversational AI
+- Document Summarization
+- Source Citations
+- Suggested Questions
+
+👨‍💻 Built by **Shubh Beniwal**
+""")
+
+st.divider()
+
+st.sidebar.title("🚀 About the Creator")
+
+st.sidebar.markdown("""
+### Shubh Beniwal
+
+## AI Engineer | Software Developer
+
+VIT Chennai Graduate | Passionate about AI, LLMs, NLP, and Software Engineering
+
+
+---
+
+### Project
+
+RAG PDF Chatbot
+
+Upload PDFs and chat with them using Retrieval-Augmented Generation (RAG).
+
+---
+
+### Tech Stack
+
+- Python
+- Streamlit
+- LangChain
+- ChromaDB
+- HuggingFace Embeddings
+- Groq LLM
+
+---
+""")
+
+st.sidebar.markdown(
+    "[GitHub](https://github.com/shubhbeniwal)"
 )
 
-if uploaded_file:
-
-    text = load_pdf(uploaded_file)
-    chunks = create_chunks(text)
-    vector_db = create_vector_store(chunks)
-
-    st.success("PDF Loaded Successfully!")
-
-    st.subheader("Chunk Information")
-
-    st.write(f"Total Chunks Created: {len(chunks)}")
-    st.success("Vector Database Created Successfully!")
-    st.subheader("Ask Questions About Your PDF")
-
-question = st.chat_input(
-    "Ask a question about your PDF..."
+st.sidebar.markdown(
+    "[LinkedIn](https://www.linkedin.com/in/shubh-beniwal/)"
+)
+# -----------------------------
+# FILE UPLOAD
+# -----------------------------
+uploaded_files = st.file_uploader(
+    "Upload PDF Documents",
+    type=["pdf"],
+    accept_multiple_files=True
 )
 
-for message in st.session_state.messages:
+# -----------------------------
+# PROCESS PDFs
+# -----------------------------
+if uploaded_files:
 
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-        
-if question:
+    all_pages = []
 
-    st.session_state.messages.append(
-        {
-            "role": "user",
-            "content": question
-        }
+    for pdf in uploaded_files:
+
+        pages = load_pdf(pdf)
+
+        all_pages.extend(pages)
+
+    documents = create_documents(all_pages)
+
+    vector_db = create_vector_store(documents)
+
+    st.success("✅ PDF Loaded Successfully")
+
+    st.info(
+        f"{len(uploaded_files)} document(s) loaded"
     )
 
-    with st.chat_message("user"):
-        st.markdown(question)
+    st.success("✅ Vector Database Created Successfully")
+    st.markdown("---")
 
-    with st.spinner("Searching document..."):
+    st.subheader("📄 Document Summary")
 
-        context, docs = retrieve_context(
-            vector_db,
-            question
-        )
+    if st.button("Generate Summary"):
 
-        answer = generate_answer(
-            context,
-            question
-        )
+        with st.spinner("Generating Summary..."):
 
-    st.session_state.messages.append(
-        {
-            "role": "assistant",
-            "content": answer
-        }
+            full_context = "\n\n".join(
+                [
+                    doc.page_content
+                    for doc in documents
+                ]
+            )
+
+            summary = summarize_document(
+                full_context[:12000]
+            )
+
+        st.markdown(summary)
+
+    st.markdown("---")
+    
+    st.subheader("💡 Suggested Questions")
+
+    if st.button("Generate Suggested Questions"):
+
+        with st.spinner("Generating questions..."):
+
+            full_context = "\n\n".join(
+                [
+                    doc.page_content
+                    for doc in documents
+                ]
+            )
+
+            suggestions = generate_suggested_questions(
+                full_context[:12000]
+            )
+
+        st.markdown(suggestions)
+
+    st.markdown("---")
+    # -----------------------------
+    # DISPLAY CHAT HISTORY
+    # -----------------------------
+    for message in st.session_state.messages:
+
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+    # -----------------------------
+    # CHAT INPUT
+    # -----------------------------
+    question = st.chat_input(
+        "Ask a question about your documents..."
     )
 
-    with st.chat_message("assistant"):
-        st.markdown(answer)
+    if question:
 
-    with st.expander("View Retrieved Context"):
-        st.markdown("### 📚 Sources Used")
-
-    for i, doc in enumerate(docs, start=1):
-
-        st.info(
-            f"Source Chunk {i}"
+        # User Message
+        st.session_state.messages.append(
+            {
+                "role": "user",
+                "content": question
+            }
         )
 
-        st.write(
-            doc.page_content[:300] + "..."
-        )
-        st.text_area(
-            "Context",
-            context,
-            height=300
+        with st.chat_message("user"):
+            st.markdown(question)
+
+        with st.spinner("Searching documents..."):
+
+            context, docs = retrieve_context(
+                vector_db,
+                question
+            )
+
+            chat_history = "\n".join(
+                [
+                    f"{msg['role']}: {msg['content']}"
+                    for msg in st.session_state.messages
+                ]
+            )
+
+            answer = generate_answer(
+                context,
+                question,
+                chat_history
+            )
+
+        # Assistant Message
+        st.session_state.messages.append(
+            {
+                "role": "assistant",
+                "content": answer
+            }
         )
 
-    if len(chunks) > 0:
-        st.text_area(
-            "First Chunk Preview",
-            chunks[0],
-            height=300
-        )
+        with st.chat_message("assistant"):
+            st.markdown(answer)
+
+        # -----------------------------
+        # SOURCES
+        # -----------------------------
+        with st.expander("📚 View Sources"):
+
+            for doc in docs:
+
+                page_number = doc.metadata.get(
+                    "page",
+                    "Unknown"
+                )
+
+                st.info(
+                    f"📄 Page {page_number}"
+                )
+
+                st.write(
+                    doc.page_content[:300] + "..."
+                )
+
+        # -----------------------------
+        # RETRIEVED CONTEXT
+        # -----------------------------
+        with st.expander("🔍 View Retrieved Context"):
+
+            st.text_area(
+                "Context",
+                context,
+                height=300
+            )
