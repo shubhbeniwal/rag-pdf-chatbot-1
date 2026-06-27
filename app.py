@@ -32,7 +32,7 @@ st.set_page_config(
 # -----------------------------
 # TITLE
 # -----------------------------
-st.title("📚 RAG PDF Chatbot")
+st.title("📚 DocuMind AI – Intelligent Document Q&A System")
 
 st.markdown("""
 ### AI-Powered Multi-Document Question Answering System
