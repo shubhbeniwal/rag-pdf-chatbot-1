@@ -1,4 +1,4 @@
-# 📚 RAG PDF Chatbot
+# 📚 DocuMind AI – Intelligent Document Q&A System
 
 An AI-powered Retrieval-Augmented Generation (RAG) chatbot that allows users to upload one or more PDF documents and interact with them using natural language.
 
