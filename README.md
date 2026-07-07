@@ -1,3 +1,7 @@
+<img width="722" height="302" alt="image" src="https://github.com/user-attachments/assets/52b96dc8-661a-428d-a7ff-331e4105911c" />
+<img width="550" height="349" alt="image" src="https://github.com/user-attachments/assets/c42b8993-43ed-4e1d-b618-fc35149c59e0" />
+
+
 # 📚 DocuMind AI – Intelligent Document Q&A System
 
 An AI-powered Retrieval-Augmented Generation (RAG) chatbot that allows users to upload one or more PDF documents and interact with them using natural language.
